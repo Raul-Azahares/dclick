@@ -1,0 +1,74 @@
+<odoo>
+    <record id="action_report_xlsx" model="ir.actions.report">
+    <field name="name">Export Report</field>
+    <field name="type">ir.actions.report</field>
+    <field name="report_name">londres_sa.report_xlsx_template</field> <!-- o el nombre de tu reporte específico -->
+    <field name="model">project.project</field> <!-- o el modelo que estás utilizando -->
+</record>
+    <record id="view_project_form" model="ir.ui.view">
+        <field name="name">project.form</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="description"/>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                        <field name="project_manager_id"/>
+                        <field name="employee_ids"/>
+                        <field name="client_id"/>
+                        <field name="task_ids"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_generate_excel" model="ir.actions.server">
+    <field name="name">Generar Excel</field>
+    <field name="model_id" ref="project.model_project_project"/>
+    <field name="binding_model_id" ref="project.model_project_project"/>
+    <field name="binding_type">action</field>
+    <field name="state">code</field>
+    <field name="code">
+        action = model.action_generate_excel()
+    </field>
+</record>
+
+<!-- Agregar el botón a la acción ventana -->
+<record id="action_project_with_button" model="ir.actions.act_window.view">
+    <field name="sequence" eval="1"/>
+    <field name="view_mode">tree</field>
+    <field name="act_window_id" ref="action_project"/>
+    <field name="view_id" ref="view_project_tree"/>
+</record>
+
+    <record id="view_project_tree" model="ir.ui.view">
+        <field name="name">project.tree</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <tree>
+
+                <field name="name"/>
+                <field name="start_date"/>
+                <field name="end_date"/>
+                <field name="project_manager_id"/>
+                <button name="action_generate_excel" type="object" string="Generar Excel" class="oe_highlight" icon="fa-file-excel-o"/>
+            </tree>
+
+        </field>
+    </record>
+
+    <record id="action_project" model="ir.actions.act_window">
+        <field name="name">Projects</field>
+        <field name="res_model">project.project</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+
+
+    <menuitem id="menu_project_root" name="Projects"/>
+    <menuitem id="menu_project" name="Projects" parent="menu_project_root" action="action_project"/>
+
+</odoo>
