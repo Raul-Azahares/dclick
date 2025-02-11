@@ -1,10 +1,40 @@
 <odoo>
-    <record id="action_report_xlsx" model="ir.actions.report">
-    <field name="name">Export Report</field>
-    <field name="type">ir.actions.report</field>
-    <field name="report_name">londres_sa.report_xlsx_template</field> <!-- o el nombre de tu reporte específico -->
-    <field name="model">project.project</field> <!-- o el modelo que estás utilizando -->
+    <!-- Vista del Asistente -->
+    <record id="view_project_report_wizard_form" model="ir.ui.view">
+        <field name="name">project.report.wizard.form</field>
+        <field name="model">project.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Project Report">
+                <group>
+                    <field name="project_ids" widget="many2many_tags"/>
+                </group>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción del Asistente -->
+    <record id="action_project_report_wizard" model="ir.actions.act_window">
+        <field name="name">Generate Project Report</field>
+        <field name="res_model">project.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+
+<!-- Acción de servidor para generar el reporte Excel -->
+<record id="server_action_generate_excel" model="ir.actions.server">
+    <field name="name">Generate Excel</field>
+    <field name="model_id" ref="project.model_project_project"/>
+    <field name="binding_model_id" ref="project.model_project_project"/>
+    <field name="binding_type">action</field>
+    <field name="state">code</field>
+    <field name="code">
+        action = model.action_generate_excel()
+    </field>
 </record>
+
+    <!-- Vista de Formulario de Proyectos -->
     <record id="view_project_form" model="ir.ui.view">
         <field name="name">project.form</field>
         <field name="model">project.project</field>
@@ -25,50 +55,47 @@
             </form>
         </field>
     </record>
-    <record id="action_generate_excel" model="ir.actions.server">
-    <field name="name">Generar Excel</field>
-    <field name="model_id" ref="project.model_project_project"/>
-    <field name="binding_model_id" ref="project.model_project_project"/>
-    <field name="binding_type">action</field>
-    <field name="state">code</field>
-    <field name="code">
-        action = model.action_generate_excel()
-    </field>
-</record>
 
-<!-- Agregar el botón a la acción ventana -->
-<record id="action_project_with_button" model="ir.actions.act_window.view">
-    <field name="sequence" eval="1"/>
-    <field name="view_mode">tree</field>
-    <field name="act_window_id" ref="action_project"/>
-    <field name="view_id" ref="view_project_tree"/>
-</record>
-
+    <!-- Vista de Árbol de Proyectos -->
     <record id="view_project_tree" model="ir.ui.view">
         <field name="name">project.tree</field>
         <field name="model">project.project</field>
         <field name="arch" type="xml">
             <tree>
-
                 <field name="name"/>
                 <field name="start_date"/>
                 <field name="end_date"/>
                 <field name="project_manager_id"/>
-                <button name="action_generate_excel" type="object" string="Generar Excel" class="oe_highlight" icon="fa-file-excel-o"/>
-            </tree>
 
+            </tree>
+        </field>
+    </record>
+        <!-- Vista de Búsqueda Personalizada -->
+    <record id="view_project_search_inherit" model="ir.ui.view">
+        <field name="name">project.project.search.inherit</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.view_project_project_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <!-- Filtro personalizado para rango de fechas -->
+                <filter string="Proyectos que terminan en un rango" name="filter_end_date_range" domain="[
+                    ('end_date', '&gt;=', context.get('date_from')),
+                    ('end_date', '&lt;=', context.get('date_to'))
+                ]">
+                    <field name="end_date" widget="daterangepicker"/>
+                </filter>
+            </xpath>
         </field>
     </record>
 
+    <!-- Acción de Ventana para Proyectos -->
     <record id="action_project" model="ir.actions.act_window">
         <field name="name">Projects</field>
         <field name="res_model">project.project</field>
         <field name="view_mode">tree,form</field>
     </record>
 
-
-
+    <!-- Menú Principal -->
     <menuitem id="menu_project_root" name="Projects"/>
     <menuitem id="menu_project" name="Projects" parent="menu_project_root" action="action_project"/>
-
 </odoo>

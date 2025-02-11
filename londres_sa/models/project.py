@@ -15,92 +15,54 @@ class Project(models.Model):
     employee_ids = fields.Many2many('hr.employee', string='Employees')
     client_id = fields.Many2one('res.partner', string='Client')
     task_ids = fields.One2many('project.task', 'project_id', string='Task')
-
-    def get_projects_in_date_range(self, start_date, end_date):
-        return self.search([
-            ('end_date', '>=', start_date),
-            ('end_date', '<=', end_date)
-        ])
+    report_file = fields.Binary(string='Archivo de Reporte')
+    report_file_name = fields.Char(string='Nombre del Archivo')
 
 
-    def test_button_action(self):
-        """Método de prueba para el botón en el listado"""
-        return True
     def action_generate_excel(self):
-        if not self:
-            return {
-                'warning': {
-                    'title': 'Advertencia',
-                    'message': 'No hay proyectos seleccionados.',
-                }
-            }
-
-        # Generar el informe para todos los proyectos seleccionados
+        # Crear un objeto en memoria para escribir el archivo Excel
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output)
-        sheet = workbook.add_worksheet("Proyectos")
 
-        # Agregar encabezados
-        headers = ['Project Name', 'Start Date', 'End Date', 'Project Manager']
-        for col, header in enumerate(headers):
-            sheet.write(0, col, header)
+        # Obtener los proyectos seleccionados
+        projects = self.env['project.project'].browse(self.env.context.get('active_ids', []))
 
-        # Agregar datos
-        row = 1
-        for project in self:
-            sheet.write(row, 0, project.name)
-            sheet.write(row, 1, str(project.start_date) if project.start_date else "")
-            sheet.write(row, 2, str(project.end_date) if project.end_date else "")
-            sheet.write(row, 3, project.project_manager_id.name if project.project_manager_id else "")
-            row += 1
+        # Iterar sobre cada proyecto y crear una hoja por proyecto
+        for project in projects:
+            # Crear una hoja para el proyecto (el nombre de la hoja es el nombre del proyecto)
+            worksheet = workbook.add_worksheet(project.name[:31])  # Limitar a 31 caracteres (límite de Excel)
 
+            # Definir encabezados para la hoja del proyecto
+            headers = ['Employee Name', 'Role']
+            row = 0
+            col = 0
+
+            # Escribir encabezados en la hoja
+            for header in headers:
+                worksheet.write(row, col, header)
+                col += 1
+
+            # Escribir datos de los empleados asignados al proyecto
+            row = 1
+            for employee in project.employee_ids:
+                worksheet.write(row, 0, employee.name or '')
+                worksheet.write(row, 1, employee.role or '')  # Mostrar el rol del empleado
+                row += 1
+
+        # Cerrar el libro y guardar los datos en el búfer
         workbook.close()
-        output.seek(0)
 
-        # Crear un archivo adjunto para descargar
+        # Preparar el archivo para descargar
+        output.seek(0)
         attachment = self.env['ir.attachment'].create({
-            'name': 'Reporte_Proyectos.xlsx',
-            'type': 'binary',
-            'datas': base64.b64encode(output.getvalue()),
-            'mimetype': 'application/vnd.ms-excel',
-            'res_model': 'project.project',
+            'name': 'projects_employees_report.xlsx',
+            'datas': base64.b64encode(output.read()),
+            'mimetype': 'application/vnd.ms-excel'
         })
 
+        # Generar el enlace para descargar el archivo
         return {
             'type': 'ir.actions.act_url',
             'url': f'/web/content/{attachment.id}?download=true',
-            'target': 'self',
-        }
-    def generate_excel_report(self):
-        output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output)
-        sheet = workbook.add_worksheet("Proyectos")
-
-        # Agregar encabezados
-        headers = ['Project Name', 'Start Date', 'End Date', 'Project Manager']
-        for col, header in enumerate(headers):
-            sheet.write(0, col, header)
-
-        # Agregar datos
-        row = 1
-        for project in self:
-            sheet.write(row, 0, project.name)
-            sheet.write(row, 1, str(project.start_date) if project.start_date else "")
-            sheet.write(row, 2, str(project.end_date) if project.end_date else "")
-            sheet.write(row, 3, project.project_manager_id.name if project.project_manager_id else "")
-            row += 1
-
-        workbook.close()
-        output.seek(0)
-
-        # Guardar archivo en campo binario
-        self.write({
-            'report_file': base64.b64encode(output.getvalue()),
-            'report_file_name': 'Reporte_Proyectos.xlsx'
-        })
-
-        return {
-            'type': 'ir.actions.act_url',
-            'url': f"/web/content/{self.id}?model=project.project&field=report_file&download=true&filename={self.report_file_name}",
             'target': 'self',
         }
